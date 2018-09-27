@@ -25,14 +25,7 @@ All of the examples assume the following input file, `sample.txt`.
 10: test
 ```
 
-### Printing a single line
-
-```Bash
-$ lines sample.txt -r 3
-3: test
-```
-
-### Printing a range of lines
+### Printing a range of lines using '--range START-END'
 
 ```Bash
 $ lines sample.txt -r 4-7
@@ -61,7 +54,14 @@ $ lines sample.txt -r 7-
 10: test
 ```
 
-### Omitting one or more header lines
+### Printing a single line using '--range NUMBER'
+
+```Bash
+$ lines sample.txt -r 3
+3: test
+```
+
+### Omitting one or more header lines using '--top NUMBER'
 
 ```Bash
 $ lines sample.txt -t 2
@@ -74,7 +74,7 @@ $ lines sample.txt -t 2
 10: test
 ```
 
-### Omitting one or more footer lines
+### Omitting one or more footer lines using '--bottom NUMBER'
 
 ```Bash
 $ lines sample.txt -b 2
