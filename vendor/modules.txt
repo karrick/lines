@@ -1,0 +1,13 @@
+# github.com/karrick/gobls v1.2.0
+github.com/karrick/gobls
+# github.com/karrick/golf v1.1.0
+github.com/karrick/golf
+# github.com/karrick/golinewrap v0.2.0
+github.com/karrick/golinewrap
+# github.com/karrick/gotb v0.1.0
+github.com/karrick/gotb
+# github.com/karrick/gows v0.2.0
+github.com/karrick/gows
+# golang.org/x/sys v0.0.0-20180321135609-bb729a57828d
+golang.org/x/sys/unix
+golang.org/x/sys/windows
