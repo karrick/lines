@@ -4,19 +4,23 @@ Print a range of lines.
 
 ## Description
 
-`lines` is a line filter that either prints a range of lines, or skips
-some specified number of lines from the header, some specified number
-of lines from the footer, or both.
+`lines` is a command line filter that either prints a range of lines,
+or skips some specified number of lines from the header, some
+specified number of lines from the footer, or both.
 
 While use of the `head` and `tail` POSIX command line programs is
 already easy to use, how does one go about skipping the initial N
-lines of a file, or skipping the final N lines of a file? Every
-solution I have seen involves an Internet search, followed by a
-handfull of solutions using `awk`, `perl`, `python`, `ruby`, or some
-other scripted solution, each with its own language.
+lines of a file, or skipping the final M lines of a file? How does one
+go about skipping both N lines from the top _and_ M lines from the
+bottom?
 
-I just want a UNIX filter command to print a range of lines, or skip
-lines from being printed. Is that too much to ask?
+Every time I need to do this I spend time doing research on the
+Internet, judging among a handfull of solutions using `awk`, `perl`,
+`python`, `ruby`, or some other scripted solution. Each of the
+proposals has a slightly different syntax, and some of them don't even
+work. However all I really want is a filter that does what I need
+without having to search and study those respective man pages. Is that
+too much to ask?
 
 I do not claim any of this is an original idea. But I have not found a
 similar program elsewhere, so I decided to write it myself. I hope it
@@ -41,6 +45,10 @@ All of the examples assume the following input file, `sample.txt`.
 
 ### Printing a range of lines using '--range START-END'
 
+`lines` accepts either `--range STRING` or `-r STRING` to specify a
+range of lines to print. In these examples, I always use the short
+flag.
+
 ```Bash
 $ lines sample.txt -r 4-7
 4: test
@@ -49,9 +57,18 @@ $ lines sample.txt -r 4-7
 7: test
 ```
 
+Interestingly, when using the short flag name, one may omit the
+space between the short flag letter and the argument. Therefore `-r
+4-7` is the same as `-r4-7`.
+
 Either or both of the ends of the range parameter may be omitted. When
 the first number is omitted, printing starts at the first line. When
 the final number is omitted, printing ends at the final line.
+
+As previously described, the intervening space between the flag letter
+and the argument may be omitted, causing `-r -3` to have the same
+meaning as `-r-3`, printing the first 3 lines of the file. Printing
+the first 3 lines of the file is equivalent to `lines --head 3`.
 
 ```Bash
 $ lines sample.txt -r -3
@@ -59,6 +76,10 @@ $ lines sample.txt -r -3
 2: test
 3: test
 ```
+
+Both `-r 7-` and `-r7-` both print lines 7 thru the end of the
+file. Note this is different than printing the final 7 lines of the
+file, as one might do with `lines --tail 7`.
 
 ```Bash
 $ lines sample.txt -r 7-
@@ -115,8 +136,9 @@ $ lines sample.txt --header 3 --footer 2
 
 ### Printing only the initial N lines
 
-Duplicates behavior of invoking `head -n 3`, but included here for
-completeness.
+Duplicates behavior of invoking `head -n N`, but included here for
+completeness. Also note this will have the same effect as calling `-r
+-N`.
 
 ```Bash
 $ lines sample.txt --head 3
