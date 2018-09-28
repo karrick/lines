@@ -8,6 +8,20 @@ Print a range of lines.
 some specified number of lines from the header, some specified number
 of lines from the footer, or both.
 
+While use of the `head` and `tail` POSIX command line programs is
+already easy to use, how does one go about skipping the initial N
+lines of a file, or skipping the final N lines of a file? Every
+solution I have seen involves an Internet search, followed by a
+handfull of solutions using `awk`, `perl`, `python`, `ruby`, or some
+other scripted solution, each with its own language.
+
+I just want a UNIX filter command to print a range of lines, or skip
+lines from being printed. Is that too much to ask?
+
+I do not claim any of this is an original idea. But I have not found a
+similar program elsewhere, so I decided to write it myself. I hope it
+serves others well.
+
 ## Example
 
 All of the examples assume the following input file, `sample.txt`.
