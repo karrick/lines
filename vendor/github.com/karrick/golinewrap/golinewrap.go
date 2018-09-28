@@ -105,6 +105,12 @@ func (ww *Writer) writePrefix() error {
 	return err
 }
 
+// Printf formats its arguments using `fmt.Sprintf`, then writes the resultant
+// string.
+func (ww *Writer) Printf(format string, a ...interface{}) (int, error) {
+	return ww.Write([]byte(fmt.Sprintf(format, a...)))
+}
+
 // Write writes buf to the underlying io.Writer. It converts the input to a
 // string, splits on newline, and emits each line as a paragraph.
 func (ww *Writer) Write(buf []byte) (int, error) {

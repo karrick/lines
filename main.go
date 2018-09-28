@@ -18,15 +18,15 @@ import (
 )
 
 var (
-	optHelp = golf.BoolP('h', "help", false, "Print command line help then exit")
+	optHelp = golf.BoolP('h', "help", false, "Print command line help then exit.")
 
-	optHead = golf.Uint("head", 0, "Only print the initial N lines")
-	optTail = golf.Uint("tail", 0, "Only print the final N lines")
+	optRange = golf.StringP('r', "range", "", "Only print lines START-END.")
 
-	optRange = golf.StringP('r', "range", "", "Only print lines START-END")
+	optHeader = golf.Int("header", 0, "Skip printing the initial N header lines.")
+	optFooter = golf.Int("footer", 0, "Skip printing the final N footer lines.")
 
-	optHeader = golf.Uint("header", 0, "Skip printing the initial N header lines")
-	optFooter = golf.Uint("footer", 0, "Skip printing the final N footer lines")
+	optHead = golf.Int("head", 0, "Only print the initial N lines.")
+	optTail = golf.Int("tail", 0, "Only print the final N lines.")
 )
 
 func helpThenExit(w *golinewrap.Writer, err error) {
@@ -35,23 +35,15 @@ func helpThenExit(w *golinewrap.Writer, err error) {
 	}
 
 	name := filepath.Base(os.Args[0])
-	_, _ = w.WriteParagraph(fmt.Sprintf("%s: Print a range of lines.", name))
-	_, _ = w.WriteParagraph(fmt.Sprintf("USAGE:\t%s [ --head N | --tail N ] [file1 [file2 ...]", name))
-	_, _ = w.WriteParagraph(fmt.Sprintf("USAGE:\t%s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name))
-	_, _ = w.WriteParagraph(fmt.Sprintf("USAGE:\t%s [ --header N ] [ --footer N ] [file1 [file2 ...]", name))
+	_, _ = w.Printf("%s: Print a range of lines.", name)
+	_, _ = w.Printf("USAGE:\t%s [ --head N | --tail N ] [file1 [file2 ...]", name)
+	_, _ = w.Printf("USAGE:\t%s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name)
+	_, _ = w.Printf("USAGE:\t%s [ --header N ] [ --footer N ] [file1 [file2 ...]", name)
 
 	_, _ = w.WriteParagraph(`Without command line arguments, reads from standard
 	input and writes to standard output. With command line arguments, reads from
 	each file in sequence, and applies the below logic independently for each
 	file.`)
-
-	_, _ = w.WriteParagraph(`When given the '--head N' command line argument,
-	prints only the initial N lines, similar to the behavior of 'head -n N', but
-	included in this tool for completeness.`)
-
-	_, _ = w.WriteParagraph(`When given the '--tail N' command line argument,
-	prints only the final N lines, similar to the behavior of 'tail -n N', but
-	included in this tool for completeness.`)
 
 	_, _ = w.WriteParagraph(`When given the '--range N' command line argument,
 	prints the line number corresponding to N. When given the '--range
@@ -68,6 +60,14 @@ func helpThenExit(w *golinewrap.Writer, err error) {
 	_, _ = w.WriteParagraph(`When given the '--footer N' command line argument,
 	omits printing the final N lines, handy for removing a possibly multiline
 	footer from some text.`)
+
+	_, _ = w.WriteParagraph(`When given the '--head N' command line argument,
+	prints only the initial N lines, similar to the behavior of 'head -n N', but
+	included in this tool for completeness.`)
+
+	_, _ = w.WriteParagraph(`When given the '--tail N' command line argument,
+	prints only the final N lines, similar to the behavior of 'tail -n N', but
+	included in this tool for completeness.`)
 
 	golf.Usage()
 
@@ -87,6 +87,9 @@ func main() {
 	}
 
 	if *optHead != 0 {
+		if *optHead < 0 {
+			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+		}
 		if *optTail != 0 {
 			helpThenExit(lw, errors.New("cannot print only the head, and only the tail."))
 		}
@@ -105,6 +108,9 @@ func main() {
 	}
 
 	if *optTail != 0 {
+		if *optTail < 0 {
+			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+		}
 		if *optRange != "" {
 			helpThenExit(lw, errors.New("cannot print only the tail, and only a range."))
 		}
@@ -163,26 +169,30 @@ func main() {
 		}
 
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return rangeReader(r, w, initialLine, finalLine)
+			return copyRange(r, w, initialLine, finalLine)
 		}))
 	}
 
+	if *optHeader < 0 || *optFooter < 0 {
+		helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+	}
+
 	exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-		return skipReader(r, w, int(*optHeader), int(*optFooter))
+		return skipRange(r, w, *optHeader, *optFooter)
 	}))
 }
 
 func exit(err error) {
 	if err != nil {
-		_, _ = lineWrapping(os.Stderr, "").WriteParagraph(fmt.Sprintf("ERROR: %s", err))
+		_, _ = lineWrapping(os.Stderr, "").Printf("ERROR: %s", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
 }
 
 func lineWrapping(w io.Writer, prefix string) *golinewrap.Writer {
-	columns, _, err := gows.GetWinSize()
-
+	// Ignore error value, but handle it below when compare column to 0.
+	columns, _, _ := gows.GetWinSize()
 	if columns == 0 || columns >= 80 {
 		columns = 79
 	} else {
@@ -209,7 +219,7 @@ func filter(args []string, callback func(io.Reader, io.Writer) error) error {
 			return callback(fh, os.Stdout)
 		})
 		if err != nil {
-			_, _ = lw.WriteParagraph(fmt.Sprintf("WARNING: %s", err))
+			_, _ = lw.Printf("WARNING: %s", err)
 		}
 	}
 
@@ -235,15 +245,17 @@ func withOpenFile(path string, callback func(*os.File) error) (err error) {
 	return
 }
 
-func rangeReader(ior io.Reader, w io.Writer, top, bottom int) error {
+// copyRange will copy lines from r to w, starting with the line number
+// corresponding to start and ending with the line number corresponding to end.
+func copyRange(r io.Reader, w io.Writer, start, end int) error {
 	var lineNumber int
 
-	br := gobls.NewScanner(ior)
+	br := gobls.NewScanner(r)
 
 	for br.Scan() {
 		lineNumber++
 
-		if top > 0 && lineNumber < top {
+		if start > 0 && lineNumber < start {
 			continue
 		}
 
@@ -251,7 +263,7 @@ func rangeReader(ior io.Reader, w io.Writer, top, bottom int) error {
 			return err
 		}
 
-		if bottom > 0 && lineNumber == bottom {
+		if end > 0 && lineNumber == end {
 			return nil
 		}
 	}
@@ -262,29 +274,32 @@ func rangeReader(ior io.Reader, w io.Writer, top, bottom int) error {
 	return nil
 }
 
-func skipReader(ior io.Reader, w io.Writer, top, bottom int) error {
+// skipRange will copy lines from r to w, skipping the specified number of
+// initial and final lines.
+func skipRange(r io.Reader, w io.Writer, initial, final int) error {
 	// Use a cirular buffer, so we are processing the Nth previous line.
-	cb, err := gotb.NewStrings(bottom)
+	cb, err := gotb.NewStrings(final)
 	if err != nil {
 		return err
 	}
 
 	var lineNumber int // used to skip T lines from top
 
-	br := gobls.NewScanner(ior)
+	br := gobls.NewScanner(r)
 
 	for br.Scan() {
-		if top > 0 {
+		if initial > 0 {
 			// Only need to count lines while ignoring tops.
-			if lineNumber++; lineNumber <= top {
+			if lineNumber++; lineNumber <= initial {
 				continue
 			}
 			// No reason to count lines any longer.
-			top = 0
+			initial = 0
 		}
 
-		// Recall circular buffer always gives us the Nth previous line, or a
-		// false for the second return value.
+		// Recall that the circular buffer always gives us the Nth previous
+		// line. When fewer than N lines have been queued, the second return
+		// value will be false.
 		line, ok := cb.QueueDequeue(br.Text())
 		if !ok {
 			continue
