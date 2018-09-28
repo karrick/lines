@@ -49,6 +49,10 @@ All of the examples assume the following input file, `sample.txt`.
 range of lines to print. In these examples, I always use the short
 flag.
 
+In general, `lines -r M-N` is equivalent to `sed -n M,Np`, although
+lines allows omitting M, in which case it will default to the first
+line, and N, in which case it will default to the last line.
+
 ```Bash
 $ lines sample.txt -r 4-7
 4: test
@@ -91,12 +95,17 @@ $ lines sample.txt -r 7-
 
 ### Printing a single line using '--range N'
 
+Equivalent to `sed -n Np`.
+
 ```Bash
 $ lines sample.txt -r 3
 3: test
 ```
 
 ### Omitting one or more header lines using '--header N'
+
+Equivalent to `(( M+=1 )) ; sed -n "$M,\$p"`, although that modifies M
+along the way.
 
 ```Bash
 $ lines sample.txt --header 2
@@ -110,6 +119,9 @@ $ lines sample.txt --header 2
 ```
 
 ### Omitting one or more footer lines using '--footer N'
+
+Equivalent to dying your hair gray, because I have not found a way to
+do this with `sed`. Maybe I should give `awk` a swing...
 
 ```Bash
 $ lines sample.txt --footer 2
@@ -125,6 +137,8 @@ $ lines sample.txt --footer 2
 
 ### Omitting lines from both the header and footer
 
+See above, regarding omitting lines from the footer.
+
 ```Bash
 $ lines sample.txt --header 3 --footer 2
 4: test
@@ -136,9 +150,8 @@ $ lines sample.txt --header 3 --footer 2
 
 ### Printing only the initial N lines
 
-Duplicates behavior of invoking `head -n N`, but included here for
-completeness. Also note this will have the same effect as calling `-r
--N`.
+Equivalent to `head -n N`. Also note this will have the same effect as
+calling `-r -N`.
 
 ```Bash
 $ lines sample.txt --head 3
@@ -149,8 +162,7 @@ $ lines sample.txt --head 3
 
 ### Printing only the final N lines
 
-Duplicates behavior of invoking `tail -n 3`, but included here for
-completeness.
+Equivalent to `tail -n 3`.
 
 ```Bash
 $ lines sample.txt --tail 3
