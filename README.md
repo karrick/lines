@@ -9,9 +9,9 @@ or skips some specified number of lines from the header, some
 specified number of lines from the footer, or both.
 
 While use of the `head` and `tail` POSIX command line programs is
-already easy to use, how does one go about skipping the initial N
-lines of a file, or skipping the final M lines of a file? How does one
-go about skipping both N lines from the top _and_ M lines from the
+already easy to use, how does one go about skipping the initial M
+lines of a file, or skipping the final N lines of a file? How does one
+go about skipping both M lines from the top _and_ N lines from the
 bottom?
 
 Every time I need to do this I spend time doing research on the
