@@ -247,12 +247,12 @@ func rangeReader(ior io.Reader, w io.Writer, top, bottom int) error {
 			continue
 		}
 
-		if bottom > 0 && lineNumber > bottom {
-			return nil
-		}
-
 		if _, err := fmt.Fprintln(w, br.Text()); err != nil {
 			return err
+		}
+
+		if bottom > 0 && lineNumber == bottom {
+			return nil
 		}
 	}
 	if err := br.Err(); err != nil {
