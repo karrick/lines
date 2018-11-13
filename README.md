@@ -170,3 +170,13 @@ $ lines sample.txt --tail 3
 9: test
 10: test
 ```
+
+## Installation
+
+If you don't have the Go programming language installed, then you'll
+need to install a copy from
+[https://golang.org/dl](https://golang.org/dl).
+
+Once you have Go installed:
+
+    $ go get github.com/karrick/lines
