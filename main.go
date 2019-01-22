@@ -12,9 +12,7 @@ import (
 
 	"github.com/karrick/gobls"
 	"github.com/karrick/golf"
-	"github.com/karrick/golinewrap"
 	"github.com/karrick/gotb"
-	"github.com/karrick/gows"
 )
 
 var (
@@ -29,45 +27,28 @@ var (
 	optBottom = golf.IntP('b', "bottom", 0, "Only print the bottom N lines.")
 )
 
-func helpThenExit(w *golinewrap.Writer, err error) {
+func helpThenExit(w io.Writer, err error) {
 	if err != nil {
-		_, _ = w.WriteParagraph(fmt.Sprintf("ERROR: %s", err))
+		_, _ = fmt.Fprintf(w, "ERROR: %s\n", err)
 	}
 
 	name := filepath.Base(os.Args[0])
-	_, _ = w.Printf("%s: Print a range of lines.", name)
-	_, _ = w.Printf("USAGE:\t%s [ --top N | --bottom N ] [file1 [file2 ...]", name)
-	_, _ = w.Printf("USAGE:\t%s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name)
-	_, _ = w.Printf("USAGE:\t%s [ --skip-top N ] [ --skip-bottom N ] [file1 [file2 ...]", name)
+	_, _ = fmt.Fprintf(w, "%s: Print a range of lines.\n", name)
+	_, _ = fmt.Fprintf(w, "\nUSAGE: %s [ --top N | --bottom N ] [file1 [file2 ...]", name)
+	_, _ = fmt.Fprintf(w, "\n  or   %s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name)
+	_, _ = fmt.Fprintf(w, "\n  or   %s [ --skip-top N ] [ --skip-bottom N ] [file1 [file2 ...]", name)
 
-	_, _ = w.WriteParagraph(`Without command line arguments, reads from standard
-	input and writes to standard output. With command line arguments, reads from
-	each file in sequence, and applies the below logic independently for each
-	file.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWithout command line arguments, reads from standard input and writes to\nstandard output. With command line arguments, reads from each file in sequence,\nand applies the below logic independently for each file.")
 
-	_, _ = w.WriteParagraph(`When given the '--range N' command line argument,
-	prints the line number corresponding to N. When given the '--range
-	START-END' command line argument, prints lines 'START' thru 'END',
-	inclusively. START must not be greater than the value of END. When START is
-	omitted, the first line printed will be the first line of the input. When
-	END is omitted, the final line printed will be the final line of the
-	input.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--range N' command line argument, prints the line number\ncorresponding to N. When given the '--range START-END' command line argument,\nprints lines 'START' thru 'END', inclusively. START must not be greater than\nthe value of END. When START is omitted, the first line printed will be the\nfirst line of the input. When END is omitted, the final line printed will be\nthe final line of the input.")
 
-	_, _ = w.WriteParagraph(`When given the '--skip-top N' command line argument,
-	omits printing the initial N lines, handy for removing a possibly multiline
-	header from some text.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--skip-top N' command line argument, omits printing the\ninitial N lines, handy for removing a possibly multiline header from some text.")
 
-	_, _ = w.WriteParagraph(`When given the '--skip-bottom N' command line argument,
-	omits printing the final N lines, handy for removing a possibly multiline
-	footer from some text.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--skip-bottom N' command line argument, omits printing the\nfinal N lines, handy for removing a possibly multiline footer from some text.")
 
-	_, _ = w.WriteParagraph(`When given the '--top N' command line argument,
-	prints only the initial N lines, similar to the behavior of 'head -n N', but
-	included in this tool for completeness.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--top N' command line argument, prints only the initial N\nlines, similar to the behavior of 'head -n N', but included in this tool for\ncompleteness.")
 
-	_, _ = w.WriteParagraph(`When given the '--bottom N' command line argument,
-	prints only the final N lines, similar to the behavior of 'tail -n N', but
-	included in this tool for completeness.`)
+	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--bottom N' command line argument, prints only the final N\nlines, similar to the behavior of 'tail -n N', but included in this tool for\ncompleteness.\n\n")
 
 	golf.Usage()
 
@@ -80,27 +61,25 @@ func helpThenExit(w *golinewrap.Writer, err error) {
 func main() {
 	golf.Parse()
 
-	lw := lineWrapping(os.Stderr, "")
-
 	if *optHelp {
-		helpThenExit(lw, nil)
+		helpThenExit(os.Stderr, nil)
 	}
 
 	if *optTop != 0 {
 		if *optTop < 0 {
-			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+			helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
 		}
 		if *optBottom != 0 {
-			helpThenExit(lw, errors.New("cannot print only the top, and only the bottom."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the top, and only the bottom."))
 		}
 		if *optRange != "" {
-			helpThenExit(lw, errors.New("cannot print only the top, and only a range."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the top, and only a range."))
 		}
 		if *optSkipBottom != 0 {
-			helpThenExit(lw, errors.New("cannot print only the top, and skip the bottom."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the top, and skip the bottom."))
 		}
 		if *optSkipTop != 0 {
-			helpThenExit(lw, errors.New("cannot print only the top, and skip the top."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the top, and skip the top."))
 		}
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
 			return top(int(*optTop), r, w)
@@ -109,16 +88,16 @@ func main() {
 
 	if *optBottom != 0 {
 		if *optBottom < 0 {
-			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+			helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
 		}
 		if *optRange != "" {
-			helpThenExit(lw, errors.New("cannot print only the bottom, and only a range."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and only a range."))
 		}
 		if *optSkipBottom != 0 {
-			helpThenExit(lw, errors.New("cannot print only the bottom, and skip the bottom."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and skip the bottom."))
 		}
 		if *optSkipTop != 0 {
-			helpThenExit(lw, errors.New("cannot print only the bottom, and skip the top."))
+			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and skip the top."))
 		}
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
 			return bottom(int(*optBottom), r, w)
@@ -127,10 +106,10 @@ func main() {
 
 	if *optRange != "" {
 		if *optSkipBottom != 0 {
-			helpThenExit(lw, errors.New("cannot print only a range, and skip the bottom."))
+			helpThenExit(os.Stderr, errors.New("cannot print only a range, and skip the bottom."))
 		}
 		if *optSkipTop != 0 {
-			helpThenExit(lw, errors.New("cannot print only a range, and skip the top."))
+			helpThenExit(os.Stderr, errors.New("cannot print only a range, and skip the top."))
 		}
 
 		var initialLine, finalLine int
@@ -141,7 +120,7 @@ func main() {
 			if a := lines[0]; a != "" {
 				initialLine, err = strconv.Atoi(a)
 				if err != nil {
-					helpThenExit(lw, fmt.Errorf("cannot parse initial value from range: %q.", a))
+					helpThenExit(os.Stderr, fmt.Errorf("cannot parse initial value from range: %q.", a))
 				}
 				finalLine = initialLine // when given a single number for a range, only print that line number
 			}
@@ -149,23 +128,23 @@ func main() {
 			if a := lines[0]; a != "" {
 				initialLine, err = strconv.Atoi(a)
 				if err != nil {
-					helpThenExit(lw, fmt.Errorf("cannot parse initial value from range: %q.", a))
+					helpThenExit(os.Stderr, fmt.Errorf("cannot parse initial value from range: %q.", a))
 				}
 			}
 
 			if a := lines[1]; a != "" {
 				finalLine, err = strconv.Atoi(a)
 				if err != nil {
-					helpThenExit(lw, fmt.Errorf("cannot parse final value from range: %q.", a))
+					helpThenExit(os.Stderr, fmt.Errorf("cannot parse final value from range: %q.", a))
 				}
 			}
 
 			if finalLine > 0 && initialLine > finalLine {
-				helpThenExit(lw, fmt.Errorf("cannot print lines %d thru %d because they are out of order.", initialLine, finalLine))
+				helpThenExit(os.Stderr, fmt.Errorf("cannot print lines %d thru %d because they are out of order.", initialLine, finalLine))
 			}
 
 		default:
-			helpThenExit(lw, fmt.Errorf("cannot print invalid range of lines: %q.", *optRange))
+			helpThenExit(os.Stderr, fmt.Errorf("cannot print invalid range of lines: %q.", *optRange))
 		}
 
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
@@ -174,7 +153,7 @@ func main() {
 	}
 
 	if *optSkipTop < 0 || *optSkipBottom < 0 {
-		helpThenExit(lw, errors.New("cannot print a negative number of lines."))
+		helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
 	}
 
 	exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
@@ -184,27 +163,10 @@ func main() {
 
 func exit(err error) {
 	if err != nil {
-		_, _ = lineWrapping(os.Stderr, "").Printf("ERROR: %s", err)
+		_, _ = fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
-}
-
-func lineWrapping(w io.Writer, prefix string) *golinewrap.Writer {
-	// Ignore error value, but handle it below when compare column to 0.
-	columns, _, _ := gows.GetWinSize()
-	if columns == 0 || columns >= 80 {
-		columns = 79
-	} else {
-		columns--
-	}
-
-	lw, err := golinewrap.New(w, columns, prefix)
-	if err != nil {
-		panic(err)
-	}
-
-	return lw
 }
 
 func filter(args []string, callback func(io.Reader, io.Writer) error) error {
@@ -212,14 +174,12 @@ func filter(args []string, callback func(io.Reader, io.Writer) error) error {
 		return callback(os.Stdin, os.Stdout)
 	}
 
-	lw := lineWrapping(os.Stderr, "")
-
 	for _, arg := range args {
 		err := withOpenFile(arg, func(fh *os.File) error {
 			return callback(fh, os.Stdout)
 		})
 		if err != nil {
-			_, _ = lw.Printf("WARNING: %s", err)
+			_, _ = fmt.Fprintf(os.Stderr, "WARNING: %s\n", err)
 		}
 	}
 
