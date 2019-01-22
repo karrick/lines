@@ -22,11 +22,11 @@ var (
 
 	optRange = golf.StringP('r', "range", "", "Only print lines START-END.")
 
-	optHeader = golf.Int("header", 0, "Skip printing the initial N header lines.")
-	optFooter = golf.Int("footer", 0, "Skip printing the final N footer lines.")
+	optSkipTop    = golf.Int("skip-top", 0, "Skip printing the top N header lines.")
+	optSkipBottom = golf.Int("skip-bottom", 0, "Skip printing the bottom N footer lines.")
 
-	optHead = golf.Int("head", 0, "Only print the initial N lines.")
-	optTail = golf.Int("tail", 0, "Only print the final N lines.")
+	optTop    = golf.IntP('t', "top", 0, "Only print the top N lines.")
+	optBottom = golf.IntP('b', "bottom", 0, "Only print the bottom N lines.")
 )
 
 func helpThenExit(w *golinewrap.Writer, err error) {
@@ -36,9 +36,9 @@ func helpThenExit(w *golinewrap.Writer, err error) {
 
 	name := filepath.Base(os.Args[0])
 	_, _ = w.Printf("%s: Print a range of lines.", name)
-	_, _ = w.Printf("USAGE:\t%s [ --head N | --tail N ] [file1 [file2 ...]", name)
+	_, _ = w.Printf("USAGE:\t%s [ --top N | --bottom N ] [file1 [file2 ...]", name)
 	_, _ = w.Printf("USAGE:\t%s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name)
-	_, _ = w.Printf("USAGE:\t%s [ --header N ] [ --footer N ] [file1 [file2 ...]", name)
+	_, _ = w.Printf("USAGE:\t%s [ --skip-top N ] [ --skip-bottom N ] [file1 [file2 ...]", name)
 
 	_, _ = w.WriteParagraph(`Without command line arguments, reads from standard
 	input and writes to standard output. With command line arguments, reads from
@@ -53,19 +53,19 @@ func helpThenExit(w *golinewrap.Writer, err error) {
 	END is omitted, the final line printed will be the final line of the
 	input.`)
 
-	_, _ = w.WriteParagraph(`When given the '--header N' command line argument,
+	_, _ = w.WriteParagraph(`When given the '--skip-top N' command line argument,
 	omits printing the initial N lines, handy for removing a possibly multiline
 	header from some text.`)
 
-	_, _ = w.WriteParagraph(`When given the '--footer N' command line argument,
+	_, _ = w.WriteParagraph(`When given the '--skip-bottom N' command line argument,
 	omits printing the final N lines, handy for removing a possibly multiline
 	footer from some text.`)
 
-	_, _ = w.WriteParagraph(`When given the '--head N' command line argument,
+	_, _ = w.WriteParagraph(`When given the '--top N' command line argument,
 	prints only the initial N lines, similar to the behavior of 'head -n N', but
 	included in this tool for completeness.`)
 
-	_, _ = w.WriteParagraph(`When given the '--tail N' command line argument,
+	_, _ = w.WriteParagraph(`When given the '--bottom N' command line argument,
 	prints only the final N lines, similar to the behavior of 'tail -n N', but
 	included in this tool for completeness.`)
 
@@ -86,51 +86,51 @@ func main() {
 		helpThenExit(lw, nil)
 	}
 
-	if *optHead != 0 {
-		if *optHead < 0 {
+	if *optTop != 0 {
+		if *optTop < 0 {
 			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
 		}
-		if *optTail != 0 {
-			helpThenExit(lw, errors.New("cannot print only the head, and only the tail."))
+		if *optBottom != 0 {
+			helpThenExit(lw, errors.New("cannot print only the top, and only the bottom."))
 		}
 		if *optRange != "" {
-			helpThenExit(lw, errors.New("cannot print only the head, and only a range."))
+			helpThenExit(lw, errors.New("cannot print only the top, and only a range."))
 		}
-		if *optFooter != 0 {
-			helpThenExit(lw, errors.New("cannot print only the head, and skip the footer."))
+		if *optSkipBottom != 0 {
+			helpThenExit(lw, errors.New("cannot print only the top, and skip the bottom."))
 		}
-		if *optHeader != 0 {
-			helpThenExit(lw, errors.New("cannot print only the head, and skip the header."))
+		if *optSkipTop != 0 {
+			helpThenExit(lw, errors.New("cannot print only the top, and skip the top."))
 		}
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return head(int(*optHead), r, w)
+			return top(int(*optTop), r, w)
 		}))
 	}
 
-	if *optTail != 0 {
-		if *optTail < 0 {
+	if *optBottom != 0 {
+		if *optBottom < 0 {
 			helpThenExit(lw, errors.New("cannot print a negative number of lines."))
 		}
 		if *optRange != "" {
-			helpThenExit(lw, errors.New("cannot print only the tail, and only a range."))
+			helpThenExit(lw, errors.New("cannot print only the bottom, and only a range."))
 		}
-		if *optFooter != 0 {
-			helpThenExit(lw, errors.New("cannot print only the tail, and skip the footer."))
+		if *optSkipBottom != 0 {
+			helpThenExit(lw, errors.New("cannot print only the bottom, and skip the bottom."))
 		}
-		if *optHeader != 0 {
-			helpThenExit(lw, errors.New("cannot print only the tail, and skip the header."))
+		if *optSkipTop != 0 {
+			helpThenExit(lw, errors.New("cannot print only the bottom, and skip the top."))
 		}
 		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return tail(int(*optTail), r, w)
+			return bottom(int(*optBottom), r, w)
 		}))
 	}
 
 	if *optRange != "" {
-		if *optFooter != 0 {
-			helpThenExit(lw, errors.New("cannot print only a range, and skip the footer."))
+		if *optSkipBottom != 0 {
+			helpThenExit(lw, errors.New("cannot print only a range, and skip the bottom."))
 		}
-		if *optHeader != 0 {
-			helpThenExit(lw, errors.New("cannot print only a range, and skip the header."))
+		if *optSkipTop != 0 {
+			helpThenExit(lw, errors.New("cannot print only a range, and skip the top."))
 		}
 
 		var initialLine, finalLine int
@@ -173,12 +173,12 @@ func main() {
 		}))
 	}
 
-	if *optHeader < 0 || *optFooter < 0 {
+	if *optSkipTop < 0 || *optSkipBottom < 0 {
 		helpThenExit(lw, errors.New("cannot print a negative number of lines."))
 	}
 
 	exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-		return skipRange(r, w, *optHeader, *optFooter)
+		return skipRange(r, w, *optSkipTop, *optSkipBottom)
 	}))
 }
 
@@ -316,8 +316,8 @@ func skipRange(r io.Reader, w io.Writer, initial, final int) error {
 	return nil
 }
 
-// head copies the initial num lines from io.Reader to io.Writer.
-func head(num int, r io.Reader, w io.Writer) error {
+// top copies the initial num lines from io.Reader to io.Writer.
+func top(num int, r io.Reader, w io.Writer) error {
 	if num == 0 {
 		return errors.New("cannot print the initial 0 lines.")
 	}
@@ -339,8 +339,8 @@ func head(num int, r io.Reader, w io.Writer) error {
 	return nil
 }
 
-// tail copies the final num lines from io.Reader to io.Writer.
-func tail(num int, r io.Reader, w io.Writer) error {
+// bottom copies the final num lines from io.Reader to io.Writer.
+func bottom(num int, r io.Reader, w io.Writer) error {
 	if num == 0 {
 		return errors.New("cannot print the final 0 lines.")
 	}

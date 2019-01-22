@@ -1,6 +1,6 @@
 # lines
 
-Print a range of lines.
+Print a range of lines from standard input or one or more files.
 
 ## Description
 
@@ -72,7 +72,7 @@ the final number is omitted, printing ends at the final line.
 As previously described, the intervening space between the flag letter
 and the argument may be omitted, causing `-r -3` to have the same
 meaning as `-r-3`, printing the first 3 lines of the file. Printing
-the first 3 lines of the file is equivalent to `lines --head 3`.
+the first 3 lines of the file is equivalent to `lines --top 3`.
 
 ```Bash
 $ lines sample.txt -r -3
@@ -83,7 +83,7 @@ $ lines sample.txt -r -3
 
 Both `-r 7-` and `-r7-` both print lines 7 thru the end of the
 file. Note this is different than printing the final 7 lines of the
-file, as one might do with `lines --tail 7`.
+file, as one might do with `lines --bottom 7`.
 
 ```Bash
 $ lines sample.txt -r 7-
@@ -102,13 +102,14 @@ $ lines sample.txt -r 3
 3: test
 ```
 
-### Omitting one or more header lines using '--header N'
+### Omitting one or more header lines using '--skip-top N'
 
 Equivalent to `(( M+=1 )) ; sed -n "$M,\$p"`, although that modifies M
 along the way.
 
 ```Bash
-$ lines sample.txt --header 2
+$ lines sample.txt --skip-top 2
+3: test
 4: test
 5: test
 6: test
@@ -118,13 +119,13 @@ $ lines sample.txt --header 2
 10: test
 ```
 
-### Omitting one or more footer lines using '--footer N'
+### Omitting one or more footer lines using '--skip-bottom N'
 
 Equivalent to dying your hair gray, because I have not found a way to
 do this with `sed`. Maybe I should give `awk` a swing...
 
 ```Bash
-$ lines sample.txt --footer 2
+$ lines sample.txt --skip-bottom 2
 1: test
 2: test
 3: test
@@ -140,7 +141,7 @@ $ lines sample.txt --footer 2
 See above, regarding omitting lines from the footer.
 
 ```Bash
-$ lines sample.txt --header 3 --footer 2
+$ lines sample.txt --skip-top 3 --skip-bottom 2
 4: test
 5: test
 6: test
@@ -154,7 +155,7 @@ Equivalent to `head -n N`. Also note this will have the same effect as
 calling `-r -N`.
 
 ```Bash
-$ lines sample.txt --head 3
+$ lines sample.txt --top 3
 1: test
 2: test
 3: test
@@ -165,7 +166,7 @@ $ lines sample.txt --head 3
 Equivalent to `tail -n 3`.
 
 ```Bash
-$ lines sample.txt --tail 3
+$ lines sample.txt --bottom 3
 8: test
 9: test
 10: test
@@ -174,8 +175,7 @@ $ lines sample.txt --tail 3
 ## Installation
 
 If you don't have the Go programming language installed, then you'll
-need to install a copy from
-[https://golang.org/dl](https://golang.org/dl).
+need to install a copy from [https://golang.org/dl](https://golang.org/dl).
 
 Once you have Go installed:
 
