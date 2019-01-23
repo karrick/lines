@@ -1,11 +1,11 @@
-require 'rbconfig'
+require "rbconfig"
 class Lines < Formula
-  desc "Print a range of lines from standard input or one or more files."
+  desc "Print a range of lines from standard input or one or more files"
   homepage "https://github.com/karrick/lines"
   version "0.5.2"
 
   if Hardware::CPU.is_64_bit?
-    case RbConfig::CONFIG['host_os']
+    case RbConfig::CONFIG["host_os"]
     when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
       :windows
     when /darwin|mac os/
@@ -20,7 +20,7 @@ class Lines < Formula
       :unknown
     end
   else
-    case RbConfig::CONFIG['host_os']
+    case RbConfig::CONFIG["host_os"]
     when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
       :windows
     when /darwin|mac os/
@@ -41,7 +41,6 @@ class Lines < Formula
   end
 
   test do
-    system "lines"
+    system "#{bin}/lines"
   end
-
 end
