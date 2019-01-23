@@ -174,6 +174,14 @@ $ lines sample.txt --bottom 3
 
 ## Installation
 
+### Using homebrew or linuxbrew
+
+```bash
+brew install karrick/homebrew-repo/lines
+```
+
+### Using Go compiler
+
 If you don't have the Go programming language installed, then you'll
 need to install a copy from [https://golang.org/dl](https://golang.org/dl).
 
