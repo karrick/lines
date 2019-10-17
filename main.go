@@ -1,330 +1,92 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
-	"github.com/karrick/gobls"
 	"github.com/karrick/golf"
-	"github.com/karrick/gotb"
 )
 
-var (
-	optHelp = golf.BoolP('h', "help", false, "Print command line help then exit.")
+var ProgramName string
 
-	optRange = golf.StringP('r', "range", "", "Only print lines START-END.")
-
-	optSkipTop    = golf.Int("skip-top", 0, "Skip printing the top N header lines.")
-	optSkipBottom = golf.Int("skip-bottom", 0, "Skip printing the bottom N footer lines.")
-
-	optTop    = golf.IntP('t', "top", 0, "Only print the top N lines.")
-	optBottom = golf.IntP('b', "bottom", 0, "Only print the bottom N lines.")
-)
-
-func helpThenExit(w io.Writer, err error) {
-	if err != nil {
-		_, _ = fmt.Fprintf(w, "ERROR: %s\n", err)
+func init() {
+	var err error
+	if ProgramName, err = os.Executable(); err != nil {
+		ProgramName = os.Args[0]
 	}
-
-	name := filepath.Base(os.Args[0])
-	_, _ = fmt.Fprintf(w, "%s: Print a range of lines.\n", name)
-	_, _ = fmt.Fprintf(w, "\nUSAGE: %s [ --top N | --bottom N ] [file1 [file2 ...]", name)
-	_, _ = fmt.Fprintf(w, "\n  or   %s [ --range M-N | --range M- | --range -N | --range N ] [file1 [file2 ...]", name)
-	_, _ = fmt.Fprintf(w, "\n  or   %s [ --skip-top N ] [ --skip-bottom N ] [file1 [file2 ...]", name)
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWithout command line arguments, reads from standard input and writes to\nstandard output. With command line arguments, reads from each file in sequence,\nand applies the below logic independently for each file.")
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--range N' command line argument, prints the line number\ncorresponding to N. When given the '--range START-END' command line argument,\nprints lines 'START' thru 'END', inclusively. START must not be greater than\nthe value of END. When START is omitted, the first line printed will be the\nfirst line of the input. When END is omitted, the final line printed will be\nthe final line of the input.")
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--skip-top N' command line argument, omits printing the\ninitial N lines, handy for removing a possibly multiline header from some text.")
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--skip-bottom N' command line argument, omits printing the\nfinal N lines, handy for removing a possibly multiline footer from some text.")
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--top N' command line argument, prints only the initial N\nlines, similar to the behavior of 'head -n N', but included in this tool for\ncompleteness.")
-
-	_, _ = fmt.Fprintf(w, "\n\n\tWhen given the '--bottom N' command line argument, prints only the final N\nlines, similar to the behavior of 'tail -n N', but included in this tool for\ncompleteness.\n\n")
-
-	golf.Usage()
-
-	if err != nil {
-		os.Exit(2)
-	}
-	os.Exit(0)
+	ProgramName = filepath.Base(ProgramName)
 }
 
 func main() {
-	golf.Parse()
-
-	if *optHelp {
-		helpThenExit(os.Stderr, nil)
-	}
-
-	if *optTop != 0 {
-		if *optTop < 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
+	if err := cmd(); err != nil {
+		stderr("%s\n", err)
+		if _, ok := err.(ErrUsage); ok {
+			golf.Usage()
+			os.Exit(2)
 		}
-		if *optBottom != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only the top, and only the bottom."))
-		}
-		if *optRange != "" {
-			helpThenExit(os.Stderr, errors.New("cannot print only the top, and only a range."))
-		}
-		if *optSkipBottom != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only the top, and skip the bottom."))
-		}
-		if *optSkipTop != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only the top, and skip the top."))
-		}
-		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return top(int(*optTop), r, w)
-		}))
-	}
-
-	if *optBottom != 0 {
-		if *optBottom < 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
-		}
-		if *optRange != "" {
-			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and only a range."))
-		}
-		if *optSkipBottom != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and skip the bottom."))
-		}
-		if *optSkipTop != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only the bottom, and skip the top."))
-		}
-		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return bottom(int(*optBottom), r, w)
-		}))
-	}
-
-	if *optRange != "" {
-		if *optSkipBottom != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only a range, and skip the bottom."))
-		}
-		if *optSkipTop != 0 {
-			helpThenExit(os.Stderr, errors.New("cannot print only a range, and skip the top."))
-		}
-
-		var initialLine, finalLine int
-		var err error
-
-		switch lines := strings.Split(*optRange, "-"); len(lines) {
-		case 1:
-			if a := lines[0]; a != "" {
-				initialLine, err = strconv.Atoi(a)
-				if err != nil {
-					helpThenExit(os.Stderr, fmt.Errorf("cannot parse initial value from range: %q.", a))
-				}
-				finalLine = initialLine // when given a single number for a range, only print that line number
-			}
-		case 2:
-			if a := lines[0]; a != "" {
-				initialLine, err = strconv.Atoi(a)
-				if err != nil {
-					helpThenExit(os.Stderr, fmt.Errorf("cannot parse initial value from range: %q.", a))
-				}
-			}
-
-			if a := lines[1]; a != "" {
-				finalLine, err = strconv.Atoi(a)
-				if err != nil {
-					helpThenExit(os.Stderr, fmt.Errorf("cannot parse final value from range: %q.", a))
-				}
-			}
-
-			if finalLine > 0 && initialLine > finalLine {
-				helpThenExit(os.Stderr, fmt.Errorf("cannot print lines %d thru %d because they are out of order.", initialLine, finalLine))
-			}
-
-		default:
-			helpThenExit(os.Stderr, fmt.Errorf("cannot print invalid range of lines: %q.", *optRange))
-		}
-
-		exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-			return copyRange(r, w, initialLine, finalLine)
-		}))
-	}
-
-	if *optSkipTop < 0 || *optSkipBottom < 0 {
-		helpThenExit(os.Stderr, errors.New("cannot print a negative number of lines."))
-	}
-
-	exit(filter(golf.Args(), func(r io.Reader, w io.Writer) error {
-		return skipRange(r, w, *optSkipTop, *optSkipBottom)
-	}))
-}
-
-func exit(err error) {
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
 		os.Exit(1)
 	}
-	os.Exit(0)
 }
 
-func filter(args []string, callback func(io.Reader, io.Writer) error) error {
-	if len(args) == 0 {
-		return callback(os.Stdin, os.Stdout)
+// newline returns a string with exactly one terminating newline character.
+// More simple than strings.TrimRight.  When input string has multiple newline
+// characters, it will strip off all but first one, reusing the same underlying
+// string bytes.  When string does not end in a newline character, it returns
+// the original string with a newline character appended.
+func newline(s string) string {
+	l := len(s)
+	if l == 0 {
+		return "\n"
 	}
 
-	for _, arg := range args {
-		err := withOpenFile(arg, func(fh *os.File) error {
-			return callback(fh, os.Stdout)
-		})
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "WARNING: %s\n", err)
-		}
-	}
-
-	return nil
-}
-
-func withOpenFile(path string, callback func(*os.File) error) (err error) {
-	var fh *os.File
-
-	fh, err = os.Open(path)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err2 := fh.Close(); err == nil {
-			err = err2
-		}
-	}()
-
-	// Set err variable so deferred function can inspect it.
-	err = callback(fh)
-	return
-}
-
-// copyRange will copy lines from r to w, starting with the line number
-// corresponding to start and ending with the line number corresponding to end.
-func copyRange(r io.Reader, w io.Writer, start, end int) error {
-	var lineNumber int
-
-	br := gobls.NewScanner(r)
-
-	for br.Scan() {
-		lineNumber++
-
-		if start > 0 && lineNumber < start {
-			continue
-		}
-
-		if _, err := fmt.Fprintln(w, br.Text()); err != nil {
-			return err
-		}
-
-		if end > 0 && lineNumber == end {
-			return nil
-		}
-	}
-	if err := br.Err(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// skipRange will copy lines from r to w, skipping the specified number of
-// initial and final lines.
-func skipRange(r io.Reader, w io.Writer, initial, final int) error {
-	// Use a cirular buffer, so we are processing the Nth previous line.
-	cb, err := gotb.NewStrings(final)
-	if err != nil {
-		return err
-	}
-
-	var lineNumber int // used to skip T lines from top
-
-	br := gobls.NewScanner(r)
-
-	for br.Scan() {
-		if initial > 0 {
-			// Only need to count lines while ignoring tops.
-			if lineNumber++; lineNumber <= initial {
-				continue
+	// While this is O(length s), it stops as soon as it finds the first non
+	// newline character in the string starting from the right hand side of the
+	// input string.  Generally this only scans one or two characters and
+	// returns.
+	for i := l - 1; i >= 0; i-- {
+		if s[i] != '\n' {
+			if i+1 < l && s[i+1] == '\n' {
+				return s[:i+2]
 			}
-			// No reason to count lines any longer.
-			initial = 0
-		}
-
-		// Recall that the circular buffer always gives us the Nth previous
-		// line. When fewer than N lines have been queued, the second return
-		// value will be false.
-		line, ok := cb.QueueDequeue(br.Text())
-		if !ok {
-			continue
-		}
-
-		if _, err = fmt.Fprintln(w, line); err != nil {
-			return err
+			return s[:i+1] + "\n"
 		}
 	}
-	if err := br.Err(); err != nil {
-		return err
-	}
 
-	return nil
+	return s[:1] // all newline characters, so just return the first one
 }
 
-// top copies the initial num lines from io.Reader to io.Writer.
-func top(num int, r io.Reader, w io.Writer) error {
-	if num == 0 {
-		return errors.New("cannot print the initial 0 lines.")
-	}
-
-	br := gobls.NewScanner(r)
-
-	for br.Scan() {
-		if _, err := fmt.Fprintln(w, br.Text()); err != nil {
-			return err
-		}
-		if num--; num == 0 {
-			return nil
-		}
-	}
-	if err := br.Err(); err != nil {
-		return err
-	}
-
-	return nil
+// stderr formats and prints its arguments to standard error after prefixing
+// them with the program name.
+func stderr(f string, args ...interface{}) {
+	os.Stderr.Write([]byte(ProgramName + ": " + newline(fmt.Sprintf(f, args...))))
 }
 
-// bottom copies the final num lines from io.Reader to io.Writer.
-func bottom(num int, r io.Reader, w io.Writer) error {
-	if num == 0 {
-		return errors.New("cannot print the final 0 lines.")
+// verbose formats and prints its arguments to standard error after prefixing
+// them with the program name.  This skips printing when optVerbose is false.
+func verbose(f string, args ...interface{}) {
+	if *optVerbose {
+		stderr(f, args...)
 	}
-
-	cb, err := gotb.NewStrings(num)
-	if err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(r)
-
-	for scanner.Scan() {
-		_, _ = cb.QueueDequeue(scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	for _, line := range cb.Drain() {
-		if _, err = fmt.Fprintln(w, line); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
+
+// warning formats and prints its arguments to standard error after prefixing
+// them with the program name.  This skips printing when optQuiet is true.
+func warning(f string, args ...interface{}) {
+	if !*optQuiet {
+		stderr(f, args...)
+	}
+}
+
+// ErrUsage is an error that a function may return when it is not invoked
+// correctly.
+type ErrUsage struct {
+	f string
+	a []interface{}
+}
+
+func NewErrUsage(f string, a ...interface{}) ErrUsage {
+	return ErrUsage{f: f, a: a}
+}
+
+func (e ErrUsage) Error() string { return fmt.Sprintf(e.f, e.a...) }

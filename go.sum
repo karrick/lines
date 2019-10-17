@@ -1,6 +1,6 @@
 github.com/karrick/gobls v1.2.0 h1:vDuAY51E9vMx3Ch6GcCzHAxfmeF/1/4PUwhZSpKMptw=
 github.com/karrick/gobls v1.2.0/go.mod h1:sWtrCXDDQ3cMhrJIb2XBu+Cm+MImIj6mdRTdR4/jywk=
-github.com/karrick/golf v1.1.0 h1:pW5IaAZlmRaq2TVHp1ct0XouZw206+wSL+ifUF6fnp8=
-github.com/karrick/golf v1.1.0/go.mod h1:qGN0IhcEL+IEgCXp00RvH32UP59vtwc8w5YcIdArNRk=
+github.com/karrick/golf v1.3.0 h1:bpXRrLTMVU6r52KWNjLTl5c5zLRdwaao3H7R7A5Xazg=
+github.com/karrick/golf v1.3.0/go.mod h1:qGN0IhcEL+IEgCXp00RvH32UP59vtwc8w5YcIdArNRk=
 github.com/karrick/gotb v0.1.0 h1:0D3riNjkaMdLIg8wx3FGTX/+UvVOioEsqXYdPP5kGew=
 github.com/karrick/gotb v0.1.0/go.mod h1:DMVIRjKmV1HguS6JL5PGR3r8E8mVNcNq0G6P9TEdMeM=
