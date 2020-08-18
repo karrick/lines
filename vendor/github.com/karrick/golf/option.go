@@ -8,8 +8,6 @@ import (
 	"unicode/utf8"
 )
 
-var flags []option
-
 // flagFromLongName performs linear search for the flag with a matching long
 // flag name in the list of flags. It returns the flag found, or nil if the
 // requested long flag name was not found.

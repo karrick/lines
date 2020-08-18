@@ -9,14 +9,11 @@ import (
 )
 
 var (
+	flags              []option
+	remainingArguments []string // keep track of remaining arguments
 	argsProcessed      int      // keep track of how many arguments have been set
 	parsed             bool     // keep track of whether command line arguments have been parsed
-	remainingArguments []string // keep track of remaining arguments
 )
-
-func init() {
-	resetParser()
-}
 
 func resetParser() {
 	argsProcessed = 0
@@ -30,7 +27,7 @@ func resetParser() {
 func Parse() {
 	// combine os.Args to a single string
 	if err := parseArgs(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		fmt.Fprintf(os.Stderr, "%s: %s\n", os.Args[0], err)
 		Usage()
 		os.Exit(2)
 	}
@@ -111,7 +108,6 @@ func Parsed() bool {
 }
 
 func slurpText(text string, nextSlurp slurpType, f option) error {
-	var i64 int64
 	var ui64 uint64
 	var err error
 
@@ -121,12 +117,11 @@ func slurpText(text string, nextSlurp slurpType, f option) error {
 	case slurpFloat:
 		*f.(*optionFloat).pv, err = strconv.ParseFloat(text, 64)
 	case slurpInt:
-		i64, err = strconv.ParseInt(text, 10, 64)
-		*f.(*optionInt).pv = int(i64)
+		*f.(*optionInt).pv, err = strconv.Atoi(text)
 	case slurpInt64:
 		*f.(*optionInt64).pv, err = strconv.ParseInt(text, 10, 64)
 	case slurpUint:
-		ui64, err = strconv.ParseUint(text, 10, 64)
+		ui64, err = strconv.ParseUint(text, 10, 0)
 		*f.(*optionUint).pv = uint(ui64)
 	case slurpUint64:
 		*f.(*optionUint64).pv, err = strconv.ParseUint(text, 10, 64)
